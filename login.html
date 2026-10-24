@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="robots" content="noindex, nofollow" />
+  <title>Sign in — Company Contacts Hub</title>
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body class="login-body">
+  <div class="login-wrap">
+    <div class="login-card">
+      <div class="login-brand" id="login-brand">COMPANY CONTACTS HUB</div>
+      <p class="login-sub">Sign in to continue</p>
+
+      <div id="setup-warning" class="notice warn" hidden>
+        The site is not connected to Firebase yet. Open <code>js/firebase-init.js</code> and paste in your Firebase details.
+      </div>
+
+      <form id="login-form">
+        <label class="field"><span>Email</span>
+          <input type="email" id="l-email" autocomplete="username" required />
+        </label>
+        <label class="field"><span>Password</span>
+          <input type="password" id="l-password" autocomplete="current-password" required />
+        </label>
+        <p id="login-error" class="form-error" hidden></p>
+        <p id="login-info" class="form-ok" hidden></p>
+        <button type="submit" class="btn-primary login-btn" id="login-btn">Sign In</button>
+        <button type="button" class="link-btn center" id="forgot">Forgot password?</button>
+      </form>
+    </div>
+  </div>
+
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+  <script src="js/settings.js"></script>
+  <script src="js/firebase-init.js"></script>
+  <script src="js/login.js"></script>
+</body>
+</html>

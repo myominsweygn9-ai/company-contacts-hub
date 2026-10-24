@@ -1,0 +1,94 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() { return request.auth != null; }
+    function isAdmin() {
+      return signedIn() &&
+        exists(/databases/$(database)/documents/roles/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/roles/$(request.auth.uid)).data.role == 'admin';
+    }
+    function isStr(v, max) { return v is string && v.size() <= max; }
+
+    // ---- roles ----
+    match /roles/{uid} {
+      allow read: if isAdmin() || (signedIn() && request.auth.uid == uid);
+      // A person may create ONLY their own profile, and only as a member.
+      allow create: if signedIn() && request.auth.uid == uid
+        && request.resource.data.role == 'member'
+        && request.resource.data.keys().hasOnly(['role','email','name','createdAt']);
+      // A person may change only their own name/email, never the role.
+      allow update: if (signedIn() && request.auth.uid == uid
+          && request.resource.data.role == resource.data.role
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name','email']))
+        || (isAdmin() && request.auth.uid != uid);
+      allow delete: if isAdmin() && request.auth.uid != uid;
+    }
+
+    // ---- categories ----
+    match /config/{doc} {
+      allow read: if signedIn();
+      allow write: if isAdmin();
+    }
+
+    // ---- vendors ----
+    match /vendors/{id} {
+      allow read: if isAdmin() || (signedIn() &&
+        (resource.data.status == 'approved' || resource.data.createdBy == request.auth.uid));
+
+      // Members may only create pending vendors that carry their own id.
+      allow create: if isAdmin() || (signedIn()
+        && request.resource.data.status == 'pending'
+        && request.resource.data.createdBy == request.auth.uid
+        && request.resource.data.ratingSum == 0
+        && request.resource.data.ratingCount == 0
+        && isStr(request.resource.data.name, 120));
+
+      allow update: if isAdmin()
+        // owner edits own pending vendor, cannot approve it
+        || (signedIn() && resource.data.createdBy == request.auth.uid
+            && resource.data.status == 'pending'
+            && request.resource.data.status == 'pending'
+            && request.resource.data.createdBy == resource.data.createdBy)
+        // anyone signed in may update only the rating totals of an approved vendor
+        || (signedIn() && resource.data.status == 'approved'
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['ratingSum','ratingCount']));
+
+      allow delete: if isAdmin()
+        || (signedIn() && resource.data.createdBy == request.auth.uid && resource.data.status == 'pending');
+
+      match /comments/{uid} {
+        allow read: if signedIn();
+        allow create, update: if signedIn() && request.auth.uid == uid
+          && request.resource.data.uid == uid
+          && request.resource.data.rating is int
+          && request.resource.data.rating >= 1 && request.resource.data.rating <= 5
+          && isStr(request.resource.data.text, 1000);
+        allow delete: if isAdmin() || (signedIn() && request.auth.uid == uid);
+      }
+    }
+
+    // ---- name card photos ----
+    match /vendorPhotos/{id} {
+      allow read: if signedIn();
+      allow create, update: if isAdmin() || (signedIn() && request.resource.data.createdBy == request.auth.uid
+        && isStr(request.resource.data.data, 200000));
+      allow delete: if isAdmin() || (signedIn() && resource.data.createdBy == request.auth.uid);
+    }
+
+    // ---- news & policy ----
+    match /news/{id} {
+      allow read: if signedIn();
+      allow write: if isAdmin();
+    }
+
+    // ---- read ticks ----
+    match /reads/{rid} {
+      allow read: if isAdmin() || (signedIn() && resource.data.uid == request.auth.uid);
+      allow create: if signedIn() && request.resource.data.uid == request.auth.uid
+        && rid == request.resource.data.postId + '_' + request.auth.uid;
+      allow update: if false;
+      allow delete: if isAdmin();
+    }
+  }
+}
