@@ -1,53 +1,58 @@
 "use strict";
 /**
- * app.js — page routing, top bar and start-up.
- * Pages are chosen by the part after # in the address:
- *   #/vendors  #/vendor/<id>  #/news  #/news/<id>  #/admin
+ * app.js — page routing, sidebar and start-up.
+ *   #/home  #/vendors  #/vendor/<id>  #/news  #/news/<id>  #/policy  #/admin/<tab>
  */
 
 const ROUTES = [
-  { re: /^#\/vendors$/, view: VendorsView, tab: "vendors" },
-  { re: /^#\/vendor\/([^/]+)$/, view: VendorDetailView, tab: "vendors" },
-  { re: /^#\/news$/, view: NewsView, tab: "news" },
-  { re: /^#\/news\/([^/]+)$/, view: NewsPostView, tab: "news" },
-  { re: /^#\/admin$/, view: AdminView, tab: "admin", adminOnly: true },
+  { re: /^#\/home$/, view: HomeView, nav: () => "home" },
+  { re: /^#\/vendors$/, view: VendorsView, nav: () => "vendors" },
+  { re: /^#\/vendor\/([^/]+)$/, view: VendorDetailView, nav: () => "vendors" },
+  { re: /^#\/news$/, view: NewsView, nav: () => "news" },
+  { re: /^#\/policy$/, view: PolicyView, nav: () => "policy" },
+  {
+    re: /^#\/news\/([^/]+)$/, view: NewsPostView,
+    nav: (id) => { const p = Store.news.find((x) => x.id === id); return p && isPolicy(p) ? "policy" : "news"; },
+  },
+  { re: /^#\/admin(?:\/([a-z]+))?$/, view: AdminView, nav: (t) => "admin-" + (t || "approvals"), adminOnly: true },
 ];
 
 let currentView = null;
 
 function route() {
-  const hash = location.hash || "#/vendors";
+  const hash = location.hash || "#/home";
+  document.body.classList.remove("nav-open");
   for (const r of ROUTES) {
     const m = hash.match(r.re);
     if (!m) continue;
     if (r.adminOnly && !isAdmin()) {
-      location.hash = "#/vendors";
+      location.hash = "#/home";
       return;
     }
     if (currentView && currentView.unmount) currentView.unmount();
     currentView = r.view;
     window.scrollTo(0, 0);
-    r.view.mount(document.getElementById("view"), m[1] ? decodeURIComponent(m[1]) : null);
-    document.querySelectorAll("#tabs a").forEach((a) =>
-      a.classList.toggle("active", a.dataset.route === r.tab)
+    const param = m[1] ? decodeURIComponent(m[1]) : null;
+    r.view.mount(document.getElementById("view"), param);
+    const key = r.nav(param);
+    document.querySelectorAll(".nav a").forEach((a) =>
+      a.classList.toggle("active", a.dataset.route === key)
     );
     return;
   }
-  location.hash = "#/vendors";
+  location.hash = "#/home";
+}
+
+function setBadge(id, n) {
+  const el = document.getElementById(id);
+  el.textContent = n;
+  el.hidden = !n;
 }
 
 function updateChrome() {
-  const nb = document.getElementById("badge-news");
-  const n = unreadCount();
-  nb.textContent = n;
-  nb.hidden = !n;
-
-  if (isAdmin()) {
-    const ab = document.getElementById("badge-admin");
-    const p = pendingVendors().length;
-    ab.textContent = p;
-    ab.hidden = !p;
-  }
+  setBadge("badge-news", unreadNewsCount());
+  setBadge("badge-policy", unreadPolicyCount());
+  if (isAdmin()) setBadge("badge-admin", pendingVendors().length);
 
   const banner = document.getElementById("banner");
   if (Store.errors.length) {
@@ -85,13 +90,30 @@ async function boot() {
     return;
   }
 
-  document.getElementById("brand-name").textContent = APP_SETTINGS.appName;
-  document.getElementById("brand-sub").textContent = APP_SETTINGS.tagline;
   document.title = APP_SETTINGS.appName;
-  document.getElementById("user-label").textContent =
-    myName() + (isAdmin() ? " · Admin" : "");
-  document.getElementById("tab-admin").hidden = !isAdmin();
+  const ini = initials(myName());
+  document.getElementById("sb-avatar").textContent = ini;
+  document.getElementById("top-avatar").textContent = ini;
+  document.getElementById("sb-name").textContent = myName();
+  document.getElementById("sb-role").textContent = isAdmin() ? "Administrator" : "Team member";
+  document.getElementById("user-label").textContent = myName();
+  document.getElementById("admin-nav").hidden = !isAdmin();
   document.getElementById("logout").addEventListener("click", logout);
+
+  // Mobile menu
+  document.getElementById("menu-btn").addEventListener("click", () => document.body.classList.toggle("nav-open"));
+  document.getElementById("sb-backdrop").addEventListener("click", () => document.body.classList.remove("nav-open"));
+
+  // Search box in the top bar searches vendors.
+  document.getElementById("gsearch").addEventListener("submit", (ev) => {
+    ev.preventDefault();
+    const input = document.getElementById("gsearch-input");
+    window.pendingVendorQuery = input.value.trim();
+    window.pendingVendorCat = "All";
+    if (location.hash === "#/vendors") route();
+    else location.hash = "#/vendors";
+    input.blur();
+  });
 
   startStore();
   onStoreChange(() => {
@@ -107,7 +129,7 @@ async function boot() {
   }
 
   document.getElementById("boot").hidden = true;
-  document.getElementById("topbar").hidden = false;
+  document.getElementById("app").hidden = false;
   updateChrome();
   window.addEventListener("hashchange", route);
   route();

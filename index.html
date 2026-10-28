@@ -10,26 +10,50 @@
 <body>
   <div id="boot" class="boot"><div class="boot-card"><p>Loading…</p></div></div>
 
-  <header class="topbar" id="topbar" hidden>
-    <div class="topbar-inner">
-      <a class="brand" href="#/vendors">
-        <span class="brand-name" id="brand-name">COMPANY CONTACTS HUB</span>
-        <span class="brand-sub" id="brand-sub"></span>
+  <div class="app" id="app" hidden>
+    <aside class="sidebar" id="sidebar">
+      <a class="sb-brand" href="#/home">
+        <span class="logo">CH</span>
+        <span class="sb-brand-text">Company<br>Contacts Hub</span>
       </a>
-      <nav class="tabs" id="tabs">
-        <a data-route="vendors" href="#/vendors">Vendors</a>
-        <a data-route="news" href="#/news">News &amp; Policy <span class="badge" id="badge-news" hidden></span></a>
-        <a data-route="admin" href="#/admin" id="tab-admin" hidden>Admin <span class="badge" id="badge-admin" hidden></span></a>
+      <div class="nav-label">WORKSPACE</div>
+      <nav class="nav" id="nav">
+        <a data-route="home" href="#/home"><i>⌂</i><span>Home</span></a>
+        <a data-route="vendors" href="#/vendors"><i>▦</i><span>Vendor Directory</span></a>
+        <a data-route="news" href="#/news"><i>▤</i><span>News &amp; Updates</span> <b class="badge" id="badge-news" hidden></b></a>
+        <a data-route="policy" href="#/policy"><i>▣</i><span>Work Policy</span> <b class="badge" id="badge-policy" hidden></b></a>
       </nav>
-      <div class="userbox">
-        <span id="user-label"></span>
-        <button type="button" id="logout" class="link-btn light">Log out</button>
+      <div id="admin-nav" hidden>
+        <div class="nav-label">ADMINISTRATION</div>
+        <nav class="nav">
+          <a data-route="admin-approvals" href="#/admin/approvals"><i>✔</i><span>Approvals</span> <b class="badge" id="badge-admin" hidden></b></a>
+          <a data-route="admin-members" href="#/admin/members"><i>♙</i><span>Members</span></a>
+          <a data-route="admin-categories" href="#/admin/categories"><i>⚙</i><span>Categories</span></a>
+          <a data-route="admin-backup" href="#/admin/backup"><i>⇩</i><span>Backup</span></a>
+        </nav>
       </div>
-    </div>
-  </header>
-  <div class="banner" id="banner" hidden></div>
+      <div class="sb-bottom">
+        <span class="avatar" id="sb-avatar">?</span>
+        <div class="sb-user"><b id="sb-name"></b><small id="sb-role"></small></div>
+        <button type="button" id="logout" class="logout" title="Log out" aria-label="Log out">↪</button>
+      </div>
+    </aside>
+    <div class="sb-backdrop" id="sb-backdrop"></div>
 
-  <main class="page" id="view"></main>
+    <div class="main">
+      <header class="topbar">
+        <button type="button" class="menu-btn" id="menu-btn" aria-label="Menu">☰</button>
+        <form class="gsearch" id="gsearch" role="search">
+          <span>⌕</span>
+          <input id="gsearch-input" type="search" placeholder="Search vendors…" autocomplete="off" />
+        </form>
+        <div class="top-user"><span class="avatar tiny" id="top-avatar">?</span><b id="user-label"></b></div>
+      </header>
+      <div class="banner" id="banner" hidden></div>
+      <main class="page" id="view"></main>
+      <footer class="foot">Company Contacts Hub · Trusted vendors · Shared news · Work better together</footer>
+    </div>
+  </div>
 
   <div id="modal-root"></div>
   <div id="toast-root"></div>
@@ -44,6 +68,7 @@
   <script src="js/store.js"></script>
   <script src="js/vendors.js"></script>
   <script src="js/news.js"></script>
+  <script src="js/home.js"></script>
   <script src="js/admin.js"></script>
   <script src="js/app.js"></script>
 </body>

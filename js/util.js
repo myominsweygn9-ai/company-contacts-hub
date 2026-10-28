@@ -268,3 +268,22 @@ function downloadJson(obj, filename) {
   document.body.removeChild(a);
   setTimeout(() => URL.revokeObjectURL(url), 2000);
 }
+
+/* ---------- shared look-and-feel helpers ---------- */
+const CATEGORY_ICONS = {
+  "Electrical": "⚡", "M&E": "⚙️", "Aircon / HVAC": "❄️", "Plumbing": "🔧",
+  "Fire Protection": "🔥", "Lifts": "🛗", "Security / CCTV": "📹",
+  "Pest Control": "🐜", "Cleaning": "🧹", "Landscaping": "🌿",
+  "Civil / Building Works": "🏗️", "Other": "📇",
+};
+function categoryIcon(c) { return CATEGORY_ICONS[c] || "📇"; }
+function initials(name) {
+  const p = String(name || "?").trim().split(/\s+/);
+  return ((p[0] || "?")[0] + (p.length > 1 ? p[p.length - 1][0] : "")).toUpperCase();
+}
+function pageHeader(title, sub, actionHtml) {
+  return `<div class="page-head"><div>
+    <div class="eyebrow">${esc(APP_SETTINGS.appName)}</div>
+    <h2>${esc(title)}</h2><p class="muted">${esc(sub)}</p>
+  </div>${actionHtml || ""}</div>`;
+}

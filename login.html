@@ -8,28 +8,38 @@
   <link rel="stylesheet" href="css/style.css" />
 </head>
 <body class="login-body">
-  <div class="login-wrap">
-    <div class="login-card">
-      <div class="login-brand" id="login-brand">COMPANY CONTACTS HUB</div>
-      <p class="login-sub">Sign in to continue</p>
+  <div class="login-split">
+    <section class="login-art">
+      <span class="logo big">CH</span>
+      <h1>Company<br>Contacts Hub</h1>
+      <p class="art-tag">Trusted vendors · Team news · Work policies</p>
+      <p class="art-note">One shared place for the contractors our team trusts, and the updates everyone should read.</p>
+    </section>
+    <section class="login-panel">
+      <div class="login-card">
+        <div class="login-brand" id="login-brand">COMPANY CONTACTS HUB</div>
+        <h2>Welcome back</h2>
+        <p class="login-sub">Sign in to access your team information.</p>
 
-      <div id="setup-warning" class="notice warn" hidden>
-        The site is not connected to Firebase yet. Open <code>js/firebase-init.js</code> and paste in your Firebase details.
+        <div id="setup-warning" class="notice warn" hidden>
+          The site is not connected to Firebase yet. Open <code>js/firebase-init.js</code> and paste in your Firebase details.
+        </div>
+
+        <form id="login-form">
+          <label class="field"><span>Email address</span>
+            <input type="email" id="l-email" autocomplete="username" placeholder="you@company.com" required />
+          </label>
+          <label class="field"><span>Password</span>
+            <input type="password" id="l-password" autocomplete="current-password" placeholder="Enter password" required />
+          </label>
+          <p id="login-error" class="form-error" hidden></p>
+          <p id="login-info" class="form-ok" hidden></p>
+          <button type="submit" class="btn-primary login-btn" id="login-btn">Sign In</button>
+          <button type="button" class="link-btn center" id="forgot">Forgot password?</button>
+        </form>
+        <div class="secure-note">🔒 Access for authorised team members only</div>
       </div>
-
-      <form id="login-form">
-        <label class="field"><span>Email</span>
-          <input type="email" id="l-email" autocomplete="username" required />
-        </label>
-        <label class="field"><span>Password</span>
-          <input type="password" id="l-password" autocomplete="current-password" required />
-        </label>
-        <p id="login-error" class="form-error" hidden></p>
-        <p id="login-info" class="form-ok" hidden></p>
-        <button type="submit" class="btn-primary login-btn" id="login-btn">Sign In</button>
-        <button type="button" class="link-btn center" id="forgot">Forgot password?</button>
-      </form>
-    </div>
+    </section>
   </div>
 
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>

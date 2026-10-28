@@ -9,6 +9,10 @@ const APP_SETTINGS = {
   appName: "COMPANY CONTACTS HUB",
   tagline: "Trusted vendors & team news",
 
+  // Posts in this news category appear on the "Work Policy" page instead of
+  // "News & Updates". Keep this name in the category list.
+  policyCategory: "Company Policy",
+
   // Starting lists. Once the admin opens the site, these are saved to the
   // database and from then on are edited in Admin > Categories.
   defaultVendorCategories: [

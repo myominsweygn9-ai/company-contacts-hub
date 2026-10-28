@@ -223,13 +223,56 @@ function openVendorForm(existing, onSaved) {
    Vendor list
 ---------------------------------------------------------------- */
 
+function vendorCardHtml(v) {
+  const n = v.ratingCount || 0;
+  const call = v.phone && telHref(v.phone);
+  const lines = [
+    v.phone ? `<div class="cl"><span>☎</span>${esc(v.phone)}</div>` : "",
+    v.email ? `<div class="cl"><span>✉</span>${esc(v.email)}</div>` : "",
+    v.address ? `<div class="cl"><span>⌖</span>${esc(v.address)}</div>` : "",
+  ].join("");
+  const href = "#/vendor/" + encodeURIComponent(v.id);
+  return `
+    <article class="card vendor-card" data-href="${href}">
+      <div class="vc-head">
+        <div class="icon-tile">${categoryIcon(v.category)}</div>
+        <div class="vc-title">
+          <h3>${esc(v.name)}</h3>
+          <div class="muted small">${esc(v.category)}${v.status === "pending" ? ' · <span class="pend-text">Pending approval</span>' : ""}</div>
+        </div>
+      </div>
+      <div class="rating-line">${
+        n
+          ? `${starsHtml(vendorAvg(v))} <span class="muted small">${vendorAvg(v).toFixed(1)} · ${n} comment${n > 1 ? "s" : ""}</span>`
+          : '<span class="muted small">No rating yet</span>'
+      }</div>
+      <p class="services">${esc(v.services || "—")}</p>
+      <div class="contact-lines">${lines}</div>
+      <div class="vc-actions">
+        ${call ? `<a class="btn-call" href="${call}">☎ Call</a>` : ""}
+        ${v.email ? `<a class="btn-mail" href="mailto:${esc(v.email)}">✉ Email</a>` : ""}
+        <a class="btn-view" href="${href}">View details</a>
+      </div>
+    </article>`;
+}
+
+// Clicking a card (but not its Call / Email links) opens the vendor page.
+function cardClick(ev) {
+  if (ev.target.closest("a,button")) return;
+  const c = ev.target.closest("[data-href]");
+  if (c) location.hash = c.dataset.href;
+}
+
 const VendorsView = (() => {
   let root = null;
   const state = { q: "", cat: "All", sort: "az" };
 
   function mount(container) {
     root = container;
-    root.innerHTML = `
+    if (window.pendingVendorQuery != null) { state.q = window.pendingVendorQuery; window.pendingVendorQuery = null; }
+    if (window.pendingVendorCat != null) { state.cat = window.pendingVendorCat; window.pendingVendorCat = null; }
+    root.innerHTML = pageHeader("Vendor Directory", "Find the right contractor or service provider.",
+        '<button type="button" class="btn-primary" id="v-add">+ Add Vendor</button>') + `
       <div class="toolbar">
         <input id="v-search" class="search" type="search" placeholder="Search name, trade, area, service..." value="${esc(state.q)}" autocomplete="off">
         <select id="v-sort" class="select" aria-label="Sort vendors">
@@ -237,7 +280,6 @@ const VendorsView = (() => {
           <option value="top">Sort: Top rated</option>
           <option value="new">Sort: Newest</option>
         </select>
-        <button type="button" class="btn-primary" id="v-add">+ Add Vendor</button>
       </div>
       <div id="v-notice"></div>
       <div class="chips" id="v-chips"></div>
@@ -252,6 +294,7 @@ const VendorsView = (() => {
       renderGrid();
     });
     root.querySelector("#v-add").addEventListener("click", () => openVendorForm(null));
+    root.querySelector("#v-grid").addEventListener("click", cardClick);
     root.querySelector("#v-chips").addEventListener("click", (ev) => {
       const b = ev.target.closest("[data-cat]");
       if (!b) return;
@@ -274,7 +317,7 @@ const VendorsView = (() => {
     if (isAdmin()) {
       const n = pendingVendors().length;
       el.innerHTML = n
-        ? `<div class="notice warn">${n} vendor${n > 1 ? "s are" : " is"} waiting for your approval. <a href="#/admin">Review now</a></div>`
+        ? `<div class="notice warn">${n} vendor${n > 1 ? "s are" : " is"} waiting for your approval. <a href="#/admin/approvals">Review now</a></div>`
         : "";
     } else {
       const n = listableVendors().filter((v) => v.status === "pending").length;
@@ -335,31 +378,7 @@ const VendorsView = (() => {
       }</div>`;
       return;
     }
-    grid.innerHTML = list
-      .map((v) => {
-        const n = v.ratingCount || 0;
-        return `
-        <a class="card vendor-card" href="#/vendor/${encodeURIComponent(v.id)}">
-          <div class="vc-top"><h3>${esc(v.name)}</h3></div>
-          <div class="vc-chips">
-            <span class="chip cat">${esc(v.category)}</span>
-            ${v.status === "pending" ? '<span class="chip pend">Pending approval</span>' : ""}
-          </div>
-          <div class="rating-line">${
-            n
-              ? `${starsHtml(vendorAvg(v))} <span class="muted">${vendorAvg(v).toFixed(1)} · ${n} comment${n > 1 ? "s" : ""}</span>`
-              : '<span class="muted">No rating yet</span>'
-          }</div>
-          <p class="services">${esc(v.services || "—")}</p>
-          <div class="vc-foot">
-            <span class="${n ? "used" : "muted"}">${
-              n ? `${n} member${n > 1 ? "s" : ""} used` : "Be the first to comment"
-            }</span>
-            <span class="btn-sm">View</span>
-          </div>
-        </a>`;
-      })
-      .join("");
+    grid.innerHTML = list.map(vendorCardHtml).join("");
   }
 
   function unmount() { root = null; }

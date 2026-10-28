@@ -8,16 +8,22 @@
  * who has not.
  */
 
-function sortedNews() {
-  return Store.news.slice().sort((a, b) => {
+function isPolicy(p) { return p.category === APP_SETTINGS.policyCategory; }
+
+function sortedNews(list) {
+  return (list || Store.news).slice().sort((a, b) => {
     if (!!b.pinned !== !!a.pinned) return b.pinned ? 1 : -1;
     return tsMillis(b.createdAt) - tsMillis(a.createdAt);
   });
 }
 
-function unreadCount() {
+function unreadNewsCount() {
   if (isAdmin()) return 0;
-  return Store.news.filter((p) => !Store.myReads[p.id]).length;
+  return Store.news.filter((p) => !isPolicy(p) && !Store.myReads[p.id]).length;
+}
+function unreadPolicyCount() {
+  if (isAdmin()) return 0;
+  return Store.news.filter((p) => isPolicy(p) && !Store.myReads[p.id]).length;
 }
 
 let markedReadThisSession = new Set();
@@ -40,11 +46,12 @@ function markRead(postId) {
 
 /* ---------- post form (admin) ---------- */
 
-function openPostForm(existing) {
+function openPostForm(existing, defaultCat) {
   const e = existing || {};
   const cats = newsCategories().slice();
   if (e.category && !cats.includes(e.category)) cats.push(e.category);
-  if (!cats.length) cats.push("Announcement");
+  if (!cats.includes(APP_SETTINGS.policyCategory)) cats.push(APP_SETTINGS.policyCategory);
+  const chosen = e.category || defaultCat || cats[0];
 
   const card = openModal(`
     <h3>${existing ? "Edit post" : "New post"}</h3>
@@ -53,7 +60,7 @@ function openPostForm(existing) {
         <label class="field span2"><span>Title *</span>
           <input id="pf-title" maxlength="150" required value="${esc(e.title)}"></label>
         <label class="field"><span>Category *</span>
-          <select id="pf-cat">${cats.map((c) => `<option ${c === e.category ? "selected" : ""}>${esc(c)}</option>`).join("")}</select></label>
+          <select id="pf-cat">${cats.map((c) => `<option ${c === chosen ? "selected" : ""}>${esc(c)}</option>`).join("")}</select></label>
         <label class="field check"><input id="pf-pin" type="checkbox" ${e.pinned ? "checked" : ""}> <span>Pin to the top</span></label>
         <label class="field span2"><span>Message *</span>
           <textarea id="pf-body" rows="8" maxlength="5000" required>${esc(e.body)}</textarea></label>
@@ -122,22 +129,51 @@ async function deletePost(postId) {
 
 /* ---------- list ---------- */
 
-const NewsView = (() => {
+function newsCardHtml(p, total) {
+  let tick;
+  if (isAdmin()) {
+    const n = Object.keys(Store.allReads[p.id] || {}).length;
+    tick = `<span class="tick admin">✓ Read by ${n}${total ? " of " + total : ""}</span>`;
+  } else {
+    tick = Store.myReads[p.id]
+      ? '<span class="tick read">✓ Read</span>'
+      : '<span class="tick new">● New</span>';
+  }
+  const body = String(p.body || "");
+  return `
+    <a class="card news-card ${p.pinned ? "pinned" : ""}" href="#/news/${encodeURIComponent(p.id)}">
+      <div class="icon-tile">${isPolicy(p) ? "📄" : "📣"}</div>
+      <div class="news-main">
+        <div class="news-top">
+          <div class="vc-chips">
+            ${p.pinned ? '<span class="chip pin">PINNED</span>' : ""}
+            <span class="chip cat">${esc(p.category)}</span>
+          </div>
+          ${tick}
+        </div>
+        <h3>${esc(p.title)}</h3>
+        <p class="preview">${esc(body.replace(/\s+/g, " ").slice(0, 180))}${body.length > 180 ? "…" : ""}</p>
+        <div class="muted small">Posted by ${esc(p.authorName || "Admin")} · ${fmtDate(p.createdAt)}</div>
+      </div>
+    </a>`;
+}
+
+// One list view for "News & Updates", one for "Work Policy".
+function createNewsList(mode) {
+  const pol = mode === "policy";
   let root = null;
   const state = { cat: "All" };
 
   function mount(container) {
     root = container;
-    root.innerHTML = `
-      <div class="toolbar">
-        <h2 class="page-title">News &amp; Policy</h2>
-        ${isAdmin() ? '<button type="button" class="btn-primary" id="n-new">+ New Post</button>' : ""}
-      </div>
-      <div class="chips" id="n-chips"></div>
-      <div id="n-list"></div>`;
+    const title = pol ? "Work Policy" : "News & Updates";
+    const sub = pol ? "Important policies, procedures and guidelines." : "Company announcements, work updates and shared information.";
+    const btn = isAdmin() ? `<button type="button" class="btn-primary" id="n-new">${pol ? "+ New Policy" : "+ New Post"}</button>` : "";
+    root.innerHTML = pageHeader(title, sub, btn) + (pol ? "" : '<div class="chips" id="n-chips"></div>') + '<div id="n-list"></div>';
     const add = root.querySelector("#n-new");
-    if (add) add.addEventListener("click", () => openPostForm(null));
-    root.querySelector("#n-chips").addEventListener("click", (ev) => {
+    if (add) add.addEventListener("click", () => openPostForm(null, pol ? APP_SETTINGS.policyCategory : (newsCategories().find((c) => c !== APP_SETTINGS.policyCategory) || "")));
+    const chips = root.querySelector("#n-chips");
+    if (chips) chips.addEventListener("click", (ev) => {
       const b = ev.target.closest("[data-cat]");
       if (!b) return;
       state.cat = b.dataset.cat;
@@ -148,49 +184,30 @@ const NewsView = (() => {
 
   function update() {
     if (!root) return;
-    const cats = newsCategories().slice();
-    Store.news.forEach((p) => { if (p.category && !cats.includes(p.category)) cats.push(p.category); });
-    root.querySelector("#n-chips").innerHTML = ["All", ...cats]
-      .map((c) => `<button type="button" class="chip-btn ${c === state.cat ? "active" : ""}" data-cat="${esc(c)}">${esc(c)}</button>`)
-      .join("");
-
-    const list = sortedNews().filter((p) => state.cat === "All" || p.category === state.cat);
+    const mine = Store.news.filter((p) => isPolicy(p) === pol);
+    if (!pol) {
+      const cats = newsCategories().filter((c) => c !== APP_SETTINGS.policyCategory);
+      mine.forEach((p) => { if (p.category && !cats.includes(p.category)) cats.push(p.category); });
+      root.querySelector("#n-chips").innerHTML = ["All", ...cats]
+        .map((c) => `<button type="button" class="chip-btn ${c === state.cat ? "active" : ""}" data-cat="${esc(c)}">${esc(c)}</button>`)
+        .join("");
+    }
+    const list = sortedNews(mine).filter((p) => pol || state.cat === "All" || p.category === state.cat);
     const el = root.querySelector("#n-list");
     if (!Store.newsLoaded) { el.innerHTML = '<div class="empty">Loading…</div>'; return; }
     if (!list.length) {
-      el.innerHTML = `<div class="empty">${Store.news.length ? "No posts in this category." : "No posts yet."}</div>`;
+      el.innerHTML = `<div class="empty">${mine.length ? "No posts in this category." : pol ? "No policies yet." : "No posts yet."}</div>`;
       return;
     }
     const total = memberList().length;
-    el.innerHTML = list.map((p) => {
-      let tick;
-      if (isAdmin()) {
-        const n = Object.keys(Store.allReads[p.id] || {}).length;
-        tick = `<span class="tick admin">✓ Read by ${n}${total ? " of " + total : ""}</span>`;
-      } else {
-        tick = Store.myReads[p.id]
-          ? '<span class="tick read">✓ Read</span>'
-          : '<span class="tick new">● New</span>';
-      }
-      return `
-        <a class="card news-card ${p.pinned ? "pinned" : ""}" href="#/news/${encodeURIComponent(p.id)}">
-          <div class="news-top">
-            <div class="vc-chips">
-              ${p.pinned ? '<span class="chip pin">PINNED</span>' : ""}
-              <span class="chip cat">${esc(p.category)}</span>
-            </div>
-            ${tick}
-          </div>
-          <h3>${esc(p.title)}</h3>
-          <p class="preview">${esc(String(p.body || "").replace(/\s+/g, " ").slice(0, 180))}${String(p.body || "").length > 180 ? "…" : ""}</p>
-          <div class="muted small">Posted by ${esc(p.authorName || "Admin")} · ${fmtDate(p.createdAt)}</div>
-        </a>`;
-    }).join("");
+    el.innerHTML = list.map((p) => newsCardHtml(p, total)).join("");
   }
 
   function unmount() { root = null; }
   return { mount, update, unmount };
-})();
+}
+const NewsView = createNewsList("news");
+const PolicyView = createNewsList("policy");
 
 /* ---------- single post ---------- */
 
@@ -200,24 +217,24 @@ const NewsPostView = (() => {
   function mount(container, postId) {
     root = container;
     id = postId;
-    root.innerHTML = `<a class="back-link" href="#/news">← Back to News &amp; Policy</a><div id="np-body"></div>`;
     update();
   }
 
   function update() {
     if (!root) return;
-    const body = root.querySelector("#np-body");
     const p = Store.news.find((x) => x.id === id);
     if (!p) {
-      body.innerHTML = Store.newsLoaded
+      root.innerHTML = '<a class="back-link" href="#/news">← Back</a>' + (Store.newsLoaded
         ? '<div class="empty">This post was not found. It may have been removed.</div>'
-        : '<div class="empty">Loading…</div>';
+        : '<div class="empty">Loading…</div>');
       return;
     }
     markRead(id);
 
+    const back = isPolicy(p) ? ["#/policy", "Work Policy"] : ["#/news", "News & Updates"];
     const edited = p.updatedAt && tsMillis(p.updatedAt) - tsMillis(p.createdAt) > 60000;
-    body.innerHTML = `
+    root.innerHTML = `
+      <a class="back-link" href="${back[0]}">← Back to ${esc(back[1])}</a>
       <article class="card post">
         <div class="vc-chips">
           ${p.pinned ? '<span class="chip pin">PINNED</span>' : ""}
@@ -241,7 +258,7 @@ const NewsPostView = (() => {
         try {
           await deletePost(p.id);
           toast("Post deleted.", "ok");
-          location.hash = "#/news";
+          location.hash = back[0];
         } catch (ex) {
           toast("Could not delete. " + (ex.message || ""), "err");
         }

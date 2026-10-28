@@ -47,23 +47,17 @@ const AdminView = (() => {
   let root = null;
   let tab = "approvals";
 
-  function mount(container) {
+  function mount(container, param) {
     root = container;
-    root.innerHTML = `
-      <h2 class="page-title">Admin</h2>
+    tab = ["approvals", "members", "categories", "backup"].includes(param) ? param : "approvals";
+    root.innerHTML = pageHeader("Administration", "Approvals, members, categories and backups.") + `
       <div class="subtabs" id="a-tabs">
-        <button type="button" data-tab="approvals">Approvals <span class="badge" id="a-badge" hidden></span></button>
-        <button type="button" data-tab="members">Members</button>
-        <button type="button" data-tab="categories">Categories</button>
-        <button type="button" data-tab="backup">Backup</button>
+        <a href="#/admin/approvals" data-tab="approvals">Approvals <span class="badge" id="a-badge" hidden></span></a>
+        <a href="#/admin/members" data-tab="members">Members</a>
+        <a href="#/admin/categories" data-tab="categories">Categories</a>
+        <a href="#/admin/backup" data-tab="backup">Backup</a>
       </div>
       <div id="a-body"></div>`;
-    root.querySelector("#a-tabs").addEventListener("click", (ev) => {
-      const b = ev.target.closest("[data-tab]");
-      if (!b) return;
-      tab = b.dataset.tab;
-      render();
-    });
     render();
   }
 
@@ -183,9 +177,10 @@ const AdminView = (() => {
             const n = items.filter((x) => x.category === c).length;
             return `<div class="trow">
               <div><strong>${esc(c)}</strong> <span class="muted small">${n} in use</span></div>
-              <div class="row-actions">
-                <button type="button" class="btn-sm" data-ren="${kind}" data-name="${esc(c)}">Rename</button>
-                <button type="button" class="btn-sm danger" data-del="${kind}" data-name="${esc(c)}">Delete</button>
+              <div class="row-actions">${kind === "news" && c === APP_SETTINGS.policyCategory
+                ? '<span class="muted small">Used by the Work Policy page</span>'
+                : `<button type="button" class="btn-sm" data-ren="${kind}" data-name="${esc(c)}">Rename</button>
+                <button type="button" class="btn-sm danger" data-del="${kind}" data-name="${esc(c)}">Delete</button>`}
               </div></div>`;
           }).join("") || '<p class="muted">No categories yet.</p>'}
         </div>
