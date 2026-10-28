@@ -8,7 +8,7 @@
  * who has not.
  */
 
-function isPolicy(p) { return p.category === APP_SETTINGS.policyCategory; }
+function isPolicy(p) { return p.category === APP_SETTINGS.policyCategory || p.category === APP_SETTINGS.legacyPolicyCategory; }
 
 function sortedNews(list) {
   return (list || Store.news).slice().sort((a, b) => {
@@ -58,12 +58,12 @@ function openPostForm(existing, defaultCat) {
     <form id="pf" novalidate>
       <div class="form-grid">
         <label class="field span2"><span>Title *</span>
-          <input id="pf-title" maxlength="150" required value="${esc(e.title)}"></label>
+          <input id="pf-title" maxlength="200" required value="${esc(e.title)}"></label>
         <label class="field"><span>Category *</span>
           <select id="pf-cat">${cats.map((c) => `<option ${c === chosen ? "selected" : ""}>${esc(c)}</option>`).join("")}</select></label>
         <label class="field check"><input id="pf-pin" type="checkbox" ${e.pinned ? "checked" : ""}> <span>Pin to the top</span></label>
         <label class="field span2"><span>Message *</span>
-          <textarea id="pf-body" rows="8" maxlength="5000" required>${esc(e.body)}</textarea></label>
+          <textarea id="pf-body" rows="12" maxlength="20000" required>${esc(e.body)}</textarea></label>
         ${existing ? '<label class="field check span2"><input id="pf-reset" type="checkbox"> <span>Mark as unread again for everyone (use after an important change)</span></label>' : ""}
       </div>
       <p class="form-error" id="pf-err" hidden></p>
@@ -152,7 +152,7 @@ function newsCardHtml(p, total) {
           ${tick}
         </div>
         <h3>${esc(p.title)}</h3>
-        <p class="preview">${esc(body.replace(/\s+/g, " ").slice(0, 180))}${body.length > 180 ? "…" : ""}</p>
+        <p class="preview">${esc(body.replace(/\s+/g, " ").slice(0, 420))}${body.length > 420 ? "…" : ""}</p>
         <div class="muted small">Posted by ${esc(p.authorName || "Admin")} · ${fmtDate(p.createdAt)}</div>
       </div>
     </a>`;
@@ -167,7 +167,7 @@ function createNewsList(mode) {
   function mount(container) {
     root = container;
     const title = pol ? "Work Policy" : "News & Updates";
-    const sub = pol ? "Important policies, procedures and guidelines." : "Company announcements, work updates and shared information.";
+    const sub = pol ? "Important policies, procedures and guidelines." : "Announcements, work updates and shared information from the team.";
     const btn = isAdmin() ? `<button type="button" class="btn-primary" id="n-new">${pol ? "+ New Policy" : "+ New Post"}</button>` : "";
     root.innerHTML = pageHeader(title, sub, btn) + (pol ? "" : '<div class="chips" id="n-chips"></div>') + '<div id="n-list"></div>';
     const add = root.querySelector("#n-new");

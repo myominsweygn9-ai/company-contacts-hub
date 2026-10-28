@@ -118,6 +118,7 @@ async function boot() {
   startStore();
   onStoreChange(() => {
     seedConfigIfNeeded();
+    migratePolicyCategory();
     updateChrome();
     if (currentView && currentView.update) currentView.update();
   });

@@ -38,9 +38,9 @@ const HomeView = (() => {
       ${pend ? `<div class="notice warn">${pend} vendor${pend > 1 ? "s are" : " is"} waiting for your approval. <a href="#/admin/approvals">Review now</a></div>` : ""}
       <section class="hero">
         <div>
-          <div class="eyebrow">YOUR INTERNAL COMPANY PORTAL</div>
+          <div class="eyebrow">YOUR INTERNAL PORTAL</div>
           <h2>Welcome, ${esc(first)}</h2>
-          <p>Find trusted contractors, read company updates and check work policies, all in one place.</p>
+          <p>Find trusted contractors, read team updates and check work policies, all in one place.</p>
         </div>
         <div class="hero-art">🤝</div>
       </section>

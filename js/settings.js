@@ -6,12 +6,13 @@
  * ------------------------------------------------------------------
  */
 const APP_SETTINGS = {
-  appName: "COMPANY CONTACTS HUB",
+  appName: "CONTACTS HUB",
   tagline: "Trusted vendors & team news",
 
   // Posts in this news category appear on the "Work Policy" page instead of
   // "News & Updates". Keep this name in the category list.
-  policyCategory: "Company Policy",
+  policyCategory: "Work Policy",
+  legacyPolicyCategory: "Company Policy", // old name, renamed automatically by the admin's first visit
 
   // Starting lists. Once the admin opens the site, these are saved to the
   // database and from then on are edited in Admin > Categories.
@@ -30,7 +31,7 @@ const APP_SETTINGS = {
     "Other",
   ],
   defaultNewsCategories: [
-    "Company Policy",
+    "Work Policy",
     "Safety Notice",
     "Announcement",
     "Tips & Know-how",

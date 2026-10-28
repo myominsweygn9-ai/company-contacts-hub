@@ -271,3 +271,18 @@ const AdminView = (() => {
   function unmount() { root = null; }
   return { mount, update, unmount };
 })();
+
+// One time, when the admin opens the site: the old category name becomes the new one.
+let policyMigrationDone = false;
+async function migratePolicyCategory() {
+  if (policyMigrationDone || !isAdmin() || !Store.configLoaded || !Store.newsLoaded) return;
+  policyMigrationDone = true;
+  const oldN = APP_SETTINGS.legacyPolicyCategory, newN = APP_SETTINGS.policyCategory;
+  const inList = newsCategories().includes(oldN);
+  const used = Store.news.some((p) => p.category === oldN);
+  if (!inList && !used) return;
+  try {
+    if (inList) await renameCategory("news", oldN, newN);
+    else await renameCategory("news", oldN, newN);
+  } catch (e) { console.error("category rename", e); policyMigrationDone = false; }
+}
